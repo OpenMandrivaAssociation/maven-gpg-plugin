@@ -1,6 +1,6 @@
 Name:           maven-gpg-plugin
 Version:        1.1
-Release:        3
+Release:        5
 Summary:        Maven GPG Plugin
 
 Group:          Development/Java
