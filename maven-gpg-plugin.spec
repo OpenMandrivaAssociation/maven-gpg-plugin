@@ -1,22 +1,21 @@
+%{?_javapackages_macros:%_javapackages_macros}
 Name:           maven-gpg-plugin
-Version:        1.1
-Release:        5
+Version:        1.4
+Release:        10.0%{?dist}
 Summary:        Maven GPG Plugin
 
-Group:          Development/Java
+
 License:        ASL 2.0
 URL:            http://maven.apache.org/plugins/maven-gpg-plugin/
-# svn export http://svn.apache.org/repos/asf/maven/plugins/tags/maven-gpg-plugin-1.1
-# tar caf maven-gpg-plugin-1.1.tar.xz maven-gpg-plugin-1.1
-Source0:        %{name}-%{version}.tar.xz
-BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+Source0:        http://repo2.maven.org/maven2/org/apache/maven/plugins/%{name}/%{version}/%{name}-%{version}-source-release.zip
+Patch0:         0001-Add-support-for-maven-3.patch
 
 BuildArch: noarch
 
-BuildRequires: java-devel >= 0:1.6.0
+BuildRequires: java-devel >= 1:1.6.0
 BuildRequires: plexus-utils
-BuildRequires: ant-nodeps
-BuildRequires: maven2
+BuildRequires: ant
+BuildRequires: maven-local
 BuildRequires: maven-install-plugin
 BuildRequires: maven-compiler-plugin
 BuildRequires: maven-plugin-plugin
@@ -25,12 +24,9 @@ BuildRequires: maven-surefire-maven-plugin
 BuildRequires: maven-surefire-provider-junit
 BuildRequires: maven-jar-plugin
 BuildRequires: maven-javadoc-plugin
-Requires: maven2
-Requires: jpackage-utils
-Requires: java
-Requires: gnupg2
-Requires(post): jpackage-utils
-Requires(postun): jpackage-utils
+
+# Uses system gpg binary for actual signing
+Requires:      gnupg
 
 Obsoletes: maven2-plugin-gpg <= 0:2.0.8
 Provides: maven2-plugin-gpg = 1:%{version}-%{release}
@@ -41,65 +37,77 @@ GnuPG. It adds goals gpg:sign and gpg:sign-and-deploy-file.
 
 
 %package javadoc
-Group:          Development/Java
+
 Summary:        Javadoc for %{name}
-Requires: jpackage-utils
 
 %description javadoc
 API documentation for %{name}.
 
-
 %prep
-%setup -q #You may need to update this according to your Source0
+%setup -q
+
+# migrate to maven 3.x 
+%patch0 -p1
+sed -i 's/${mavenVersion}/3.0.4/' pom.xml
 
 %build
-export MAVEN_REPO_LOCAL=$(pwd)/.m2/repository
-# tests are skipped because we need new maven to actually execute
-# them. Remove when maven-2.2.x is done.
-mvn-jpp \
-        -e \
-        -Dmaven2.jpp.mode=true \
-        -Dmaven.repo.local=$MAVEN_REPO_LOCAL \
-        -Dmaven.test.skip=true \
-        install javadoc:javadoc
+%mvn_build
 
 %install
-rm -rf %{buildroot}
+%mvn_install
 
-# jars
-install -Dpm 644 target/%{name}-%{version}.jar %{buildroot}%{_javadir}/%{name}-%{version}.jar
+%files -f .mfiles
+%dir %{_javadir}/%{name}
+%doc LICENSE NOTICE
 
-(cd %{buildroot}%{_javadir} && for jar in *-%{version}*; \
-    do ln -sf ${jar} `echo $jar| sed "s|-%{version}||g"`; done)
+%files javadoc -f .mfiles-javadoc
+%doc LICENSE NOTICE
 
-%add_to_maven_depmap org.apache.maven.plugins %{name} %{version} JPP %{name}
+%changelog
+* Sat Aug 03 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.4-10
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_20_Mass_Rebuild
 
-# poms
-install -Dpm 644 pom.xml %{buildroot}%{_mavenpomdir}/JPP-%{name}.pom
+* Wed Jul 17 2013 Tomas Radej <tradej@redhat.com> - 1.4-9
+- Added R on gnupg (used for actual singing)
 
-# javadoc
-install -dm 755 %{buildroot}%{_javadocdir}/%{name}-%{version}
-cp -pr target/site/api*/* %{buildroot}%{_javadocdir}/%{name}-%{version}/
-ln -s %{name}-%{version} %{buildroot}%{_javadocdir}/%{name}
-rm -rf target/site/api*
+* Tue Jun 25 2013 Tomas Radej <tradej@redhat.com> - 1.4-8
+- Removed BR on ant-nodeps (no longer available)
 
-%post
-%update_maven_depmap
+* Tue Feb 12 2013 Mikolaj Izdebski <mizdebsk@redhat.com> - 1.4-7
+- Use default packaging layout
 
-%postun
-%update_maven_depmap
+* Tue Feb 12 2013 Michal Srb <msrb@redhat.com> - 1.4-6
+- Build with xmvn
 
-%clean
-rm -rf %{buildroot}
+* Wed Feb 06 2013 Java SIG <java-devel@lists.fedoraproject.org> - 1.4-5
+- Update for https://fedoraproject.org/wiki/Fedora_19_Maven_Rebuild
+- Replace maven BuildRequires with maven-local
 
-%files
-%defattr(-,root,root,-)
-%{_javadir}/*
-%{_mavenpomdir}/*
-%{_mavendepmapfragdir}/*
+* Mon Nov 26 2012 Stanislav Ochotnicky <sochotnicky@redhat.com> - 1.4-4
+- Install LICENSE and NOTICE files (#879367)
 
-%files javadoc
-%defattr(-,root,root,-)
-%{_javadocdir}/%{name}-%{version}
-%{_javadocdir}/%{name}
+* Thu Jul 19 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.4-3
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_18_Mass_Rebuild
 
+* Fri Jan 13 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.4-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_17_Mass_Rebuild
+
+* Tue Sep 6 2011 Alexander Kurtakov <akurtako@redhat.com> 1.4-1
+- Update to latest upstream version.
+
+* Mon Jun 13 2011 Stanislav Ochotnicky <sochotnicky@redhat.com> - 1.3-1
+- Update to latest upstream version
+
+* Fri Mar 25 2011 Alexander Kurtakov <akurtako@redhat.com> 1.2-1
+- Update to new upstream release.
+- Adapt to current guidelines.
+
+* Tue Feb 08 2011 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.1-3
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_15_Mass_Rebuild
+
+* Wed Jun  2 2010 Stanislav Ochotnicky <sochotnicky@redhat.com> - 1.1-2
+- Fix depmap call
+- Add gnupg2 to Requires
+
+* Tue Jun  1 2010 Stanislav Ochotnicky <sochotnicky@redhat.com> - 1.1-1
+- Initial package

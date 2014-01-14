@@ -1,0 +1,63 @@
+From 900d254a483b8d751456afc444f9e67d85d03c0c Mon Sep 17 00:00:00 2001
+From: Stanislav Ochotnicky <sochotnicky@redhat.com>
+Date: Wed, 20 Jul 2011 14:57:00 +0200
+Subject: [PATCH] Add support for maven 3
+
+---
+ pom.xml                                            |    5 +++++
+ .../maven/plugin/gpg/AscArtifactMetadata.java      |    9 +++++++++
+ .../maven/plugin/gpg/AttachedSignedArtifact.java   |    2 +-
+ 3 files changed, 15 insertions(+), 1 deletions(-)
+
+diff --git a/pom.xml b/pom.xml
+index d68cf39..d2f97b9 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -57,6 +57,11 @@ under the License.
+   <dependencies>
+     <dependency>
+       <groupId>org.apache.maven</groupId>
++      <artifactId>maven-compat</artifactId>
++      <version>${mavenVersion}</version>
++    </dependency>
++    <dependency>
++      <groupId>org.apache.maven</groupId>
+       <artifactId>maven-plugin-api</artifactId>
+       <version>${mavenVersion}</version>
+     </dependency>
+diff --git a/src/main/java/org/apache/maven/plugin/gpg/AscArtifactMetadata.java b/src/main/java/org/apache/maven/plugin/gpg/AscArtifactMetadata.java
+index b348c87..98bb5d8 100644
+--- a/src/main/java/org/apache/maven/plugin/gpg/AscArtifactMetadata.java
++++ b/src/main/java/org/apache/maven/plugin/gpg/AscArtifactMetadata.java
+@@ -85,6 +85,15 @@ public class AscArtifactMetadata
+     {
+         return getFilename();
+     }
++    public void merge( org.apache.maven.repository.legacy.metadata.ArtifactMetadata metadata )
++    {
++        AscArtifactMetadata m = (AscArtifactMetadata) metadata;
++        if ( !m.file.equals( file ) )
++        {
++            throw new IllegalStateException( "Cannot add two different pieces of metadata for: " + getKey() );
++        }
++    }
++ 
+ 
+     public void merge( ArtifactMetadata metadata )
+     {
+diff --git a/src/main/java/org/apache/maven/plugin/gpg/AttachedSignedArtifact.java b/src/main/java/org/apache/maven/plugin/gpg/AttachedSignedArtifact.java
+index a4baf8e..cc8e508 100644
+--- a/src/main/java/org/apache/maven/plugin/gpg/AttachedSignedArtifact.java
++++ b/src/main/java/org/apache/maven/plugin/gpg/AttachedSignedArtifact.java
+@@ -192,7 +192,7 @@ public class AttachedSignedArtifact
+         return delegate.equals( o );
+     }
+ 
+-    public int compareTo( Object o )
++    public int compareTo( Artifact o )
+     {
+         return delegate.compareTo( o );
+     }
+-- 
+1.7.6
+
